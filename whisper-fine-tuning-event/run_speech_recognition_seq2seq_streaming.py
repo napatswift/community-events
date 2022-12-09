@@ -551,7 +551,7 @@ def main():
         with open('eval', 'a') as f:
             f.write('NORMALIZED\n')
             for p,l in zip(pred_str, label_str):
-                f.write(f'{p},\t\t{l}')
+                f.write(f'{p},\t\t{l}\n')
 
         if do_normalize_eval:
             pred_str = [normalizer(pred) for pred in pred_str]
@@ -563,7 +563,7 @@ def main():
         with open('eval', 'a') as f:
             f.write('NORMALIZED\n')
             for p,l in zip(pred_str, label_str):
-                f.write(f'{p},\t\t{l}')
+                f.write(f'{p},\t\t{l}\n')
 
         wer = 100 * metric.compute(predictions=pred_str, references=label_str)
 
