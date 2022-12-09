@@ -50,6 +50,8 @@ from transformers.trainer_pt_utils import IterableDatasetShard
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
+import re
+import attacut
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
@@ -285,6 +287,30 @@ def load_maybe_streaming_dataset(dataset_name, dataset_config_name, split="train
         dataset = load_dataset(dataset_name, dataset_config_name, split=split, streaming=streaming, **kwargs)
         return dataset
 
+def normalizer(text):
+    text = re.sub('[^0-9a-zA-Z\u0E00-\u0E7F ]', '', text)
+    if 'ๆ' in text:
+        tokens = attacut.tokenize(re.sub(' ?ๆ ?','ๆ',text))
+        mai_ya_mok_index = None
+        try:
+            mai_ya_mok_index = [i for i,tok in enumerate(tokens) if 'ๆ' == tok.strip()][0]
+        except:
+            c_tokens = []
+            for tok in tokens:
+                if 'ๆ' != tok.strip() and 'ๆ' in tok:
+                    c_tokens.append(tok.replace('ๆ', ''))
+                    mai_ya_mok_index = len(c_tokens)
+                    c_tokens.append('ๆ')
+                else:
+                    c_tokens.append(tok)
+            tokens = c_tokens
+        if mai_ya_mok_index is None:
+            print(tokens)
+        else:
+            mai_ya_mok_index = mai_ya_mok_index
+            tokens[mai_ya_mok_index] = tokens[mai_ya_mok_index - 1]
+            text = ''.join(tokens)
+    return re.sub('\s+', ' ', text).strip()
 
 def main():
     # 1. Parse input arguments
@@ -452,7 +478,7 @@ def main():
     model_input_name = feature_extractor.model_input_names[0]
     do_lower_case = data_args.do_lower_case
     do_remove_punctuation = data_args.do_remove_punctuation
-    normalizer = BasicTextNormalizer()  # 'official' text normalizer from OpenAI
+    # normalizer = BasicTextNormalizer()  # 'official' text normalizer from OpenAI
 
     if data_args.max_train_samples is not None:
         raw_datasets["train"] = (
@@ -478,8 +504,10 @@ def main():
 
         # process targets
         input_str = batch[text_column_name].lower() if do_lower_case else batch[text_column_name]
+
         if do_remove_punctuation:
             input_str = normalizer(input_str).strip()
+
         batch["labels"] = tokenizer(input_str).input_ids
         return batch
 
@@ -518,10 +546,20 @@ def main():
         pred_str = tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
         # we do not want to group tokens when computing the metrics
         label_str = tokenizer.batch_decode(pred.label_ids, skip_special_tokens=True)
+        
+        with open('eval', 'a') as f:
+            f.write('NORMALIZED\n')
+            for p,l in zip(pred_str, label_str):
+                f.write(f'{p},\t\t{l}')
 
         if do_normalize_eval:
             pred_str = [normalizer(pred) for pred in pred_str]
             label_str = [normalizer(label) for label in label_str]
+
+        with open('eval', 'a') as f:
+            f.write('NORMALIZED\n')
+            for p,l in zip(pred_str, label_str):
+                f.write(f'{p},\t\t{l}')
 
         wer = 100 * metric.compute(predictions=pred_str, references=label_str)
 
