@@ -529,10 +529,11 @@ def main():
     def is_audio_in_length_range(length):
         return min_input_length < length < max_input_length
 
-    vectorized_datasets["train"] = vectorized_datasets["train"].filter(
-        is_audio_in_length_range,
-        input_columns=["input_length"],
-    )
+    if training_args.do_train:
+        vectorized_datasets["train"] = vectorized_datasets["train"].filter(
+            is_audio_in_length_range,
+            input_columns=["input_length"],
+        )
 
     # 8. Load Metric
     metric = evaluate.load("wer")
@@ -555,6 +556,9 @@ def main():
         if do_normalize_eval:
             pred_str = [normalizer(pred) for pred in pred_str]
             label_str = [normalizer(label) for label in label_str]
+            # filtering step to only evaluate the samples that correspond to non-zero references:
+            pred_str = [pred_str[i] for i in range(len(pred_str)) if len(label_str[i]) > 0]
+            label_str = [label_str[i] for i in range(len(label_str)) if len(label_str[i]) > 0]
 
         with open('eval', 'a') as f:
             f.write('NORMALIZED\n')
