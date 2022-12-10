@@ -289,10 +289,9 @@ def load_maybe_streaming_dataset(dataset_name, dataset_config_name, split="train
 
 def normalizer(text, eval_set=False):
     if eval_set:
-        tokens = text.split()
-        text = ''.join(tokens)
+        text = re.sub('[^0-9a-zA-Z\u0E00-\u0E7F \?\!]', '', text)
         text = ' '.join(attacut.tokenize(text))
-    return re.sub('[^0-9a-zA-Z\u0E00-\u0E7F \?\!]', '', text)
+    return re.sub('\s+', ' ', text).strip()
 
 def main():
     # 1. Parse input arguments
