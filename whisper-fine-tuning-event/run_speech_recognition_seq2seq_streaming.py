@@ -287,30 +287,12 @@ def load_maybe_streaming_dataset(dataset_name, dataset_config_name, split="train
         dataset = load_dataset(dataset_name, dataset_config_name, split=split, streaming=streaming, **kwargs)
         return dataset
 
-def normalizer(text):
-    text = re.sub('[^0-9a-zA-Z\u0E00-\u0E7F ]', '', text)
-    if 'ๆ' in text:
-        tokens = attacut.tokenize(re.sub(' ?ๆ ?','ๆ',text))
-        mai_ya_mok_index = None
-        try:
-            mai_ya_mok_index = [i for i,tok in enumerate(tokens) if 'ๆ' == tok.strip()][0]
-        except:
-            c_tokens = []
-            for tok in tokens:
-                if 'ๆ' != tok.strip() and 'ๆ' in tok:
-                    c_tokens.append(tok.replace('ๆ', ''))
-                    mai_ya_mok_index = len(c_tokens)
-                    c_tokens.append('ๆ')
-                else:
-                    c_tokens.append(tok)
-            tokens = c_tokens
-        if mai_ya_mok_index is None:
-            print(tokens)
-        else:
-            mai_ya_mok_index = mai_ya_mok_index
-            tokens[mai_ya_mok_index] = tokens[mai_ya_mok_index - 1]
-            text = ''.join(tokens)
-    return re.sub('\s+', ' ', text).strip()
+def normalizer(text, eval_set=False):
+    if eval_set:
+        tokens = text.split()
+        text = ''.join(tokens)
+        text = ' '.join(attacut.tokenize(text))
+    return re.sub('[^0-9a-zA-Z\u0E00-\u0E7F \?\!]', '', text)
 
 def main():
     # 1. Parse input arguments
@@ -549,13 +531,13 @@ def main():
         label_str = tokenizer.batch_decode(pred.label_ids, skip_special_tokens=True)
         
         with open('eval', 'a') as f:
-            f.write('NORMALIZED\n')
+            f.write('----------\n')
             for p,l in zip(pred_str, label_str):
                 f.write(f'{p},\t\t{l}\n')
 
         if do_normalize_eval:
-            pred_str = [normalizer(pred) for pred in pred_str]
-            label_str = [normalizer(label) for label in label_str]
+            pred_str  = [normalizer(pred, eval_set=True) for pred in pred_str]
+            label_str = [normalizer(label, eval_set=True) for label in label_str]
             # filtering step to only evaluate the samples that correspond to non-zero references:
             pred_str = [pred_str[i] for i in range(len(pred_str)) if len(label_str[i]) > 0]
             label_str = [label_str[i] for i in range(len(label_str)) if len(label_str[i]) > 0]
