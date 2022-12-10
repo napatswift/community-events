@@ -529,11 +529,6 @@ def main():
         pred_str = tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
         # we do not want to group tokens when computing the metrics
         label_str = tokenizer.batch_decode(pred.label_ids, skip_special_tokens=True)
-        
-        with open('eval', 'a') as f:
-            f.write('----------\n')
-            for p,l in zip(pred_str, label_str):
-                f.write(f'{p},\t\t{l}\n')
 
         if do_normalize_eval:
             pred_str  = [normalizer(pred, eval_set=True) for pred in pred_str]
@@ -543,7 +538,6 @@ def main():
             label_str = [label_str[i] for i in range(len(label_str)) if len(label_str[i]) > 0]
 
         with open('eval', 'a') as f:
-            f.write('NORMALIZED\n')
             for p,l in zip(pred_str, label_str):
                 f.write(f'{p},\t\t{l}\n')
 
